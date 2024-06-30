@@ -1,6 +1,6 @@
 opencv-python
 streamlit
-dlib-19.22.99-cp310-cp310-win_amd64.whl
+dlib-bin
 scipy
 pillow
 

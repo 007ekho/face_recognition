@@ -192,159 +192,165 @@
 
 # if __name__ == "__main__":
 #     main()
+###################################################################################################
+###################################################################################################
+#################################
+#################################
+###################################################################################################
+###################################################################################################
+#################################
+#################################
+#################################
+# import streamlit as st
+# import cv2
+# import dlib
+# from scipy.spatial import distance
+# import numpy as np
+# from PIL import Image
 
+# # Constants
+# EYE_AR_THRESH = 0.3
+# EYE_AR_CONSEC_FRAMES = 3
+# BRIGHTNESS_THRESH = 100  # Threshold for brightness
+# ALIGNMENT_THRESH = 0.35  # Threshold for face alignment
 
+# # Initialize dlib's face detector (HOG-based) and then create the facial landmark predictor
+# detector = dlib.get_frontal_face_detector()
+# predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
-import streamlit as st
-import cv2
-import dlib
-from scipy.spatial import distance
-import numpy as np
-from PIL import Image
+# # Grab the indexes of the facial landmarks for the left and right eye, respectively
+# (lStart, lEnd) = (42, 48)
+# (rStart, rEnd) = (36, 42)
 
-# Constants
-EYE_AR_THRESH = 0.3
-EYE_AR_CONSEC_FRAMES = 3
-BRIGHTNESS_THRESH = 100  # Threshold for brightness
-ALIGNMENT_THRESH = 0.35  # Threshold for face alignment
+# def eye_aspect_ratio(eye):
+#     A = distance.euclidean(eye[1], eye[5])
+#     B = distance.euclidean(eye[2], eye[4])
+#     C = distance.euclidean(eye[0], eye[3])
+#     ear = (A + B) / (2.0 * C)
+#     return ear
 
-# Initialize dlib's face detector (HOG-based) and then create the facial landmark predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+# def shape_to_np(shape, dtype="int"):
+#     coords = np.zeros((68, 2), dtype=dtype)
+#     for i in range(0, 68):
+#         coords[i] = (shape.part(i).x, shape.part(i).y)
+#     return coords
 
-# Grab the indexes of the facial landmarks for the left and right eye, respectively
-(lStart, lEnd) = (42, 48)
-(rStart, rEnd) = (36, 42)
+# def check_eye_blink(frame):
+#     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#     rects = detector(gray, 0)
 
-def eye_aspect_ratio(eye):
-    A = distance.euclidean(eye[1], eye[5])
-    B = distance.euclidean(eye[2], eye[4])
-    C = distance.euclidean(eye[0], eye[3])
-    ear = (A + B) / (2.0 * C)
-    return ear
+#     for rect in rects:
+#         shape = predictor(gray, rect)
+#         shape = shape_to_np(shape)
 
-def shape_to_np(shape, dtype="int"):
-    coords = np.zeros((68, 2), dtype=dtype)
-    for i in range(0, 68):
-        coords[i] = (shape.part(i).x, shape.part(i).y)
-    return coords
+#         leftEye = shape[lStart:lEnd]
+#         rightEye = shape[rStart:rEnd]
+#         leftEAR = eye_aspect_ratio(leftEye)
+#         rightEAR = eye_aspect_ratio(rightEye)
 
-def check_eye_blink(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    rects = detector(gray, 0)
+#         ear = (leftEAR + rightEAR) / 2.0
 
-    for rect in rects:
-        shape = predictor(gray, rect)
-        shape = shape_to_np(shape)
+#         if ear < EYE_AR_THRESH:
+#             return True
+#     return False
 
-        leftEye = shape[lStart:lEnd]
-        rightEye = shape[rStart:rEnd]
-        leftEAR = eye_aspect_ratio(leftEye)
-        rightEAR = eye_aspect_ratio(rightEye)
+# def detect_face(frame):
+#     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#     faces = detector(gray)
 
-        ear = (leftEAR + rightEAR) / 2.0
+#     if len(faces) > 0:
+#         return True
+#     return False
 
-        if ear < EYE_AR_THRESH:
-            return True
-    return False
+# def check_brightness(frame):
+#     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#     mean_brightness = np.mean(gray)
+#     return mean_brightness > BRIGHTNESS_THRESH
 
-def detect_face(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = detector(gray)
+# def check_alignment(frame):
+#     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+#     rects = detector(gray, 0)
 
-    if len(faces) > 0:
-        return True
-    return False
+#     for rect in rects:
+#         shape = predictor(gray, rect)
+#         shape = shape_to_np(shape)
 
-def check_brightness(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    mean_brightness = np.mean(gray)
-    return mean_brightness > BRIGHTNESS_THRESH
+#         leftEye = shape[lStart:lEnd]
+#         rightEye = shape[rStart:rEnd]
+#         nose = shape[27]  # Nose tip landmark
 
-def check_alignment(frame):
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    rects = detector(gray, 0)
+#         # Calculate the center of the face based on the nose position
+#         face_center_x = rect.left() + (rect.right() - rect.left()) // 2
+#         face_center_y = rect.top() + (rect.bottom() - rect.top()) // 2
 
-    for rect in rects:
-        shape = predictor(gray, rect)
-        shape = shape_to_np(shape)
+#         # Calculate the distances from the face center to the eyes and nose
+#         left_eye_dist = distance.euclidean((face_center_x, face_center_y), leftEye.mean(axis=0))
+#         right_eye_dist = distance.euclidean((face_center_x, face_center_y), rightEye.mean(axis=0))
+#         nose_dist = distance.euclidean((face_center_x, face_center_y), nose)
 
-        leftEye = shape[lStart:lEnd]
-        rightEye = shape[rStart:rEnd]
-        nose = shape[27]  # Nose tip landmark
+#         # Check if the distances are within a reasonable range
+#         if abs(left_eye_dist - right_eye_dist) / nose_dist < ALIGNMENT_THRESH:
+#             return True
+#     return False
 
-        # Calculate the center of the face based on the nose position
-        face_center_x = rect.left() + (rect.right() - rect.left()) // 2
-        face_center_y = rect.top() + (rect.bottom() - rect.top()) // 2
+# def main():
+#     st.title("Facial Recognition with Eye Blink Detection")
 
-        # Calculate the distances from the face center to the eyes and nose
-        left_eye_dist = distance.euclidean((face_center_x, face_center_y), leftEye.mean(axis=0))
-        right_eye_dist = distance.euclidean((face_center_x, face_center_y), rightEye.mean(axis=0))
-        nose_dist = distance.euclidean((face_center_x, face_center_y), nose)
+#     # Create a placeholder for the video frame
+#     frame_placeholder = st.empty()
 
-        # Check if the distances are within a reasonable range
-        if abs(left_eye_dist - right_eye_dist) / nose_dist < ALIGNMENT_THRESH:
-            return True
-    return False
+#     # Open the webcam
+#     cap = cv2.VideoCapture(0)
 
-def main():
-    st.title("Facial Recognition with Eye Blink Detection")
+#     # Process the video stream
+#     while True:
+#         ret, frame = cap.read()
+#         if not ret:
+#             break
 
-    # Create a placeholder for the video frame
-    frame_placeholder = st.empty()
+#         well_lit = check_brightness(frame)
+#         if not well_lit:
+#             message = "Disapproval: Insufficient lighting."
+#             color = (0, 0, 255)
+#         else:
+#             face_detected = detect_face(frame)
+#             if face_detected:
+#                 well_aligned = check_alignment(frame)
+#                 if not well_aligned:
+#                     message = "Disapproval: Please adjust your head."
+#                     color = (0, 0, 255)
+#                 else:
+#                     eye_blink_detected = check_eye_blink(frame)
+#                     if eye_blink_detected:
+#                         message = "Approval: Face and eye blink detected."
+#                         color = (0, 255, 0)
+#                     else:
+#                         message = "Disapproval: Eye blink not detected."
+#                         color = (0, 0, 255)
+#             else:
+#                 message = "Disapproval: Face not detected."
+#                 color = (0, 0, 255)
 
-    # Open the webcam
-    cap = cv2.VideoCapture(0)
+#         # Display the message on the frame
+#         cv2.putText(frame, message, (10, 30),
+#                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-    # Process the video stream
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+#         # Convert the frame to RGB format for Streamlit
+#         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#         frame_image = Image.fromarray(frame_rgb)
 
-        well_lit = check_brightness(frame)
-        if not well_lit:
-            message = "Disapproval: Insufficient lighting."
-            color = (0, 0, 255)
-        else:
-            face_detected = detect_face(frame)
-            if face_detected:
-                well_aligned = check_alignment(frame)
-                if not well_aligned:
-                    message = "Disapproval: Please adjust your head."
-                    color = (0, 0, 255)
-                else:
-                    eye_blink_detected = check_eye_blink(frame)
-                    if eye_blink_detected:
-                        message = "Approval: Face and eye blink detected."
-                        color = (0, 255, 0)
-                    else:
-                        message = "Disapproval: Eye blink not detected."
-                        color = (0, 0, 255)
-            else:
-                message = "Disapproval: Face not detected."
-                color = (0, 0, 255)
+#         # Display the frame in Streamlit
+#         frame_placeholder.image(frame_image, use_column_width=True)
 
-        # Display the message on the frame
-        cv2.putText(frame, message, (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+#         # Break the loop if 'q' is pressed
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             break
 
-        # Convert the frame to RGB format for Streamlit
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_image = Image.fromarray(frame_rgb)
+#     cap.release()
+#     cv2.destroyAllWindows()
 
-        # Display the frame in Streamlit
-        frame_placeholder.image(frame_image, use_column_width=True)
-
-        # Break the loop if 'q' is pressed
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
 
@@ -653,5 +659,159 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     main()
+
+
+
+import cv2
+import streamlit as st
+from PIL import Image
+import numpy as np
+import dlib
+from scipy.spatial import distance
+
+# Constants
+EYE_AR_THRESH = 0.3
+EYE_AR_CONSEC_FRAMES = 3
+BRIGHTNESS_THRESH = 100  # Threshold for brightness
+ALIGNMENT_THRESH = 0.35  # Threshold for face alignment
+
+# Initialize dlib's face detector (HOG-based) and then create the facial landmark predictor
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+
+# Grab the indexes of the facial landmarks for the left and right eye, respectively
+(lStart, lEnd) = (42, 48)
+(rStart, rEnd) = (36, 42)
+
+def eye_aspect_ratio(eye):
+    A = distance.euclidean(eye[1], eye[5])
+    B = distance.euclidean(eye[2], eye[4])
+    C = distance.euclidean(eye[0], eye[3])
+    ear = (A + B) / (2.0 * C)
+    return ear
+
+def shape_to_np(shape, dtype="int"):
+    coords = np.zeros((68, 2), dtype=dtype)
+    for i in range(0, 68):
+        coords[i] = (shape.part(i).x, shape.part(i).y)
+    return coords
+
+def check_eye_blink(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    rects = detector(gray, 0)
+
+    for rect in rects:
+        shape = predictor(gray, rect)
+        shape = shape_to_np(shape)
+
+        leftEye = shape[lStart:lEnd]
+        rightEye = shape[rStart:rEnd]
+        leftEAR = eye_aspect_ratio(leftEye)
+        rightEAR = eye_aspect_ratio(rightEye)
+
+        ear = (leftEAR + rightEAR) / 2.0
+
+        if ear < EYE_AR_THRESH:
+            return True
+    return False
+
+def detect_face(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = detector(gray)
+
+    if len(faces) > 0:
+        return True
+    return False
+
+def check_brightness(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    mean_brightness = np.mean(gray)
+    return mean_brightness > BRIGHTNESS_THRESH
+
+def check_alignment(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    rects = detector(gray, 0)
+
+    for rect in rects:
+        shape = predictor(gray, rect)
+        shape = shape_to_np(shape)
+
+        leftEye = shape[lStart:lEnd]
+        rightEye = shape[rStart:rEnd]
+        nose = shape[27]  # Nose tip landmark
+
+        # Calculate the center of the face based on the nose position
+        face_center_x = rect.left() + (rect.right() - rect.left()) // 2
+        face_center_y = rect.top() + (rect.bottom() - rect.top()) // 2
+
+        # Calculate the distances from the face center to the eyes and nose
+        left_eye_dist = distance.euclidean((face_center_x, face_center_y), leftEye.mean(axis=0))
+        right_eye_dist = distance.euclidean((face_center_x, face_center_y), rightEye.mean(axis=0))
+        nose_dist = distance.euclidean((face_center_x, face_center_y), nose)
+
+        # Check if the distances are within a reasonable range
+        if abs(left_eye_dist - right_eye_dist) / nose_dist < ALIGNMENT_THRESH:
+            return True
+    return False
+
+def main():
+    st.title("Facial Recognition with Eye Blink Detection")
+
+    # Create a placeholder for the video frame
+    frame_placeholder = st.empty()
+
+    # Open the webcam
+    cap = cv2.VideoCapture(0, cv2.CAP_V4L2)
+
+    # Process the video stream
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        well_lit = check_brightness(frame)
+        if not well_lit:
+            message = "Disapproval: Insufficient lighting."
+            color = (0, 0, 255)
+        else:
+            face_detected = detect_face(frame)
+            if face_detected:
+                well_aligned = check_alignment(frame)
+                if not well_aligned:
+                    message = "Disapproval: Please adjust your head."
+                    color = (0, 0, 255)
+                else:
+                    eye_blink_detected = check_eye_blink(frame)
+                    if eye_blink_detected:
+                        message = "Approval: Face and eye blink detected."
+                        color = (0, 255, 0)
+                    else:
+                        message = "Disapproval: Eye blink not detected."
+                        color = (0, 0, 255)
+            else:
+                message = "Disapproval: Face not detected."
+                color = (0, 0, 255)
+
+        # Display the message on the frame
+        cv2.putText(frame, message, (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+
+        # Convert the frame to RGB format for Streamlit
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_image = Image.fromarray(frame_rgb)
+
+        # Display the frame in Streamlit
+        frame_placeholder.image(frame_image, use_column_width=True)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
+
 
 

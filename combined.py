@@ -1161,7 +1161,7 @@ elif app_mode =='Run on Video':
     i = 0
     drawing_spec = mp_drawing.DrawingSpec(thickness=2, circle_radius=2)
 
-    kpi1, kpi2, kpi3 = st.beta_columns(3)
+    kpi1, kpi2, kpi3 = st.columns(3)
 
     with kpi1:
         st.markdown("**FrameRate**")

@@ -1296,160 +1296,45 @@
 
 
 
-
 import streamlit as st
-from streamlit_webrtc import webrtc_streamer, VideoTransformerBase
+import time
 import cv2
-import dlib
-from scipy.spatial import distance
 import numpy as np
 
-# Constants
-EYE_AR_THRESH = 0.3
-BRIGHTNESS_THRESH = 100  # Threshold for brightness
-ALIGNMENT_THRESH = 0.35  # Threshold for face alignment
+st.title("5 Seconds Video Recorder")
 
-# Initialize dlib's face detector (HOG-based) and then create the facial landmark predictor
-detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+# Create a button to start the recording process
+start_recording = st.button("Start Recording")
 
-# Grab the indexes of the facial landmarks for the left and right eye, respectively
-(lStart, lEnd) = (42, 48)
-(rStart, rEnd) = (36, 42)
+if start_recording:
+    st.write("Recording for 5 seconds...")
 
-class VideoTransformer(VideoTransformerBase):
-    def transform(self, frame):
-        img = frame.to_ndarray(format="bgr24")
+    # Initialize video capture from camera
+    cap = cv2.VideoCapture(0)
 
-        # Process the frame for face detection and eye blink detection
-        well_lit = self.check_brightness(img)
-        if not well_lit:
-            message = "Disapproval: Insufficient lighting."
-            color = (0, 0, 255)
-        else:
-            face_detected = self.detect_face(img)
-            if face_detected:
-                well_aligned = self.check_alignment(img)
-                if not well_aligned:
-                    message = "Disapproval: Please adjust your head."
-                    color = (0, 0, 255)
-                else:
-                    eye_blink_detected = self.check_eye_blink(img)
-                    if eye_blink_detected:
-                        message = "Approval: Face and eye blink detected."
-                        color = (0, 255, 0)
-                    else:
-                        message = "Disapproval: Eye blink not detected."
-                        color = (0, 0, 255)
-            else:
-                message = "Disapproval: Face not detected."
-                color = (0, 0, 255)
+    # Get the start time
+    start_time = time.time()
 
-        # Draw message on the frame
-        cv2.putText(img, message, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+    frames = []
+    while time.time() - start_time < 5:
+        ret, frame = cap.read()
+        if ret:
+            frames.append(frame)
+            st.image(frame, channels="BGR")
 
-        return img
+    cap.release()
 
-    def check_eye_blink(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        rects = detector(gray, 0)
+    # Create a video file from captured frames
+    height, width, _ = frames[0].shape
+    out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, (width, height))
 
-        for rect in rects:
-            shape = predictor(gray, rect)
-            shape = self.shape_to_np(shape)
+    for frame in frames:
+        out.write(frame)
 
-            leftEye = shape[lStart:lEnd]
-            rightEye = shape[rStart:rEnd]
-            leftEAR = self.eye_aspect_ratio(leftEye)
-            rightEAR = self.eye_aspect_ratio(rightEye)
+    out.release()
+    st.write("Recording finished!")
 
-            ear = (leftEAR + rightEAR) / 2.0
+    # Display the video file
+    st.video('output.avi')
 
-            if ear < EYE_AR_THRESH:
-                return True
-        return False
-
-    def detect_face(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = detector(gray)
-
-        if len(faces) > 0:
-            return True
-        return False
-
-    def check_brightness(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        mean_brightness = np.mean(gray)
-        return mean_brightness > BRIGHTNESS_THRESH
-
-    def check_alignment(self, frame):
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        rects = detector(gray, 0)
-
-        for rect in rects:
-            shape = predictor(gray, rect)
-            shape = self.shape_to_np(shape)
-
-            leftEye = shape[lStart:lEnd]
-            rightEye = shape[rStart:rEnd]
-            nose = shape[27]  # Nose tip landmark
-
-            # Calculate the center of the face based on the nose position
-            face_center_x = rect.left() + (rect.right() - rect.left()) // 2
-            face_center_y = rect.top() + (rect.bottom() - rect.top()) // 2
-
-            # Calculate the distances from the face center to the eyes and nose
-            left_eye_dist = distance.euclidean((face_center_x, face_center_y), leftEye.mean(axis=0))
-            right_eye_dist = distance.euclidean((face_center_x, face_center_y), rightEye.mean(axis=0))
-            nose_dist = distance.euclidean((face_center_x, face_center_y), nose)
-
-            # Check if the distances are within a reasonable range
-            if abs(left_eye_dist - right_eye_dist) / nose_dist < ALIGNMENT_THRESH:
-                return True
-        return False
-
-    def eye_aspect_ratio(self, eye):
-        A = distance.euclidean(eye[1], eye[5])
-        B = distance.euclidean(eye[2], eye[4])
-        C = distance.euclidean(eye[0], eye[3])
-        ear = (A + B) / (2.0 * C)
-        return ear
-
-    def shape_to_np(self, shape, dtype="int"):
-        coords = np.zeros((68, 2), dtype=dtype)
-        for i in range(0, 68):
-            coords[i] = (shape.part(i).x, shape.part(i).y)
-        return coords
-
-def main():
-    st.title("Facial Recognition with Eye Blink Detection")
-
-    # Face Analysis Application #
-    st.title("Real Time Face Analysis Application")
-    activities = ["Webcam Face Analysis", "About"]
-    choice = st.sidebar.selectbox("Select Activity", activities)
-
-    if choice == "Webcam Face Analysis":
-        st.header("Webcam Live Feed")
-        st.write("Click on start to use webcam and perform face analysis")
-
-        # Initialize webcam stream
-        webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
-
-    elif choice == "About":
-        st.subheader("About this app")
-        st.write("""
-                 Real-time face analysis application using OpenCV, dlib, and Streamlit.
-                 """)
-
-        st.markdown(
-            """
-            Developed by Mohammad Juned Khan
-            Email: Mohammad.juned.z.khan@gmail.com
-            [LinkedIn](https://www.linkedin.com/in/md-juned-khan)
-            """
-        )
-
-if __name__ == "__main__":
-    main()
 

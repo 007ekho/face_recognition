@@ -848,7 +848,6 @@ predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 class VideoTransformer(VideoTransformerBase):
     def transform(self, frame):
-        # Convert frame to BGR format (OpenCV uses BGR)
         img = frame.to_ndarray(format="bgr24")
 
         # Process the frame for face detection and eye blink detection
@@ -878,7 +877,6 @@ class VideoTransformer(VideoTransformerBase):
         # Draw message on the frame
         cv2.putText(img, message, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-        # Return the processed frame
         return img
 
     def check_eye_blink(self, frame):
@@ -955,13 +953,31 @@ class VideoTransformer(VideoTransformerBase):
 def main():
     st.title("Facial Recognition with Eye Blink Detection")
 
-    webrtc_ctx = webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+    # Face Analysis Application #
+    st.title("Real Time Face Analysis Application")
+    activities = ["Webcam Face Analysis", "About"]
+    choice = st.sidebar.selectbox("Select Activity", activities)
+
+    if choice == "Webcam Face Analysis":
+        st.header("Webcam Live Feed")
+        st.write("Click on start to use webcam and perform face analysis")
+
+        # Initialize webcam stream
+        webrtc_ctx = webrtc_streamer(key="example", video_transformer_factory=VideoTransformer)
+
+    elif choice == "About":
+        st.subheader("About this app")
+        st.write("""
+                 Real-time face analysis application using OpenCV, dlib, and Streamlit.
+                 """)
+
+        st.markdown(
+            """
+            Developed by Mohammad Juned Khan
+            Email: Mohammad.juned.z.khan@gmail.com
+            [LinkedIn](https://www.linkedin.com/in/md-juned-khan)
+            """
+        )
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

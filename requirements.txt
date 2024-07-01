@@ -4,7 +4,7 @@ streamlit_webrtc
 dlib-bin
 scipy
 pillow
-tempfile
+
 mediapipe
 time
 
